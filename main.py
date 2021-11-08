@@ -1,5 +1,6 @@
 import pygame
 from random import randint as ri
+from random import choice
 
 from config import *
 from utility import *
@@ -19,6 +20,30 @@ class Coin(Block):
 
     def __init__(self, image_path, coord):
         Block.__init__(self, image_path, coord)
+
+
+class Turret:
+    def __init__(self, image_path, coord):
+        Block.__init__(self, image_path, coord)
+
+    def update(self):
+        pass
+
+
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, coord):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = image_load(BULLET)
+        print(coord)
+        self.rect = pygame.Rect(coord, PLAYER_SIZE)
+        self.vx, self.vy = choice([-BULLET_SPEED, BULLET_SPEED]), ri(0, BULLET_SPEED)
+
+    def update(self):
+        self.rect.x += self.vx
+        self.rect.y -= self.vy
+        for i in game.hard_blocks:
+            if self.rect.colliderect(i.rect):
+                self.kill()
 
 
 class Player(pygame.sprite.Sprite):
@@ -142,6 +167,8 @@ class Window:
         self.all_blocks = pygame.sprite.Group()
         self.hard_blocks = pygame.sprite.Group()
         self.spike_blocks = pygame.sprite.Group()
+        self.turret_blocks = pygame.sprite.Group()
+        self.bullets = pygame.sprite.Group()
         self.player = Player()
 
         self.running = True
@@ -157,6 +184,7 @@ class Window:
         self.all_blocks.empty()
         self.hard_blocks.empty()
         self.spike_blocks.empty()
+        self.turret_blocks.empty()
         self.player.add(self.all_blocks)
         with open(self.map, 'r', encoding='utf-8') as file:
             for y, line in enumerate(file):
@@ -169,12 +197,16 @@ class Window:
                             block.add(self.hard_blocks)
                         if letter in SPIKE_BLOCKS:
                             block.add(self.spike_blocks)
+                        if letter in TURRET_BLOCKS:
+                            block.add(self.turret_blocks)
+                            Turret(BLOCKS[letter], coord)
                         elif letter in COIN_BLOCKS:
                             block.add(self.coins)
 
     def run(self):
         self.load_map()
         self.running = True
+        time = pygame.time.get_ticks()
         while self.running:
             # события
             events = pygame.event.get()
@@ -195,6 +227,16 @@ class Window:
 
             # отрисовка
             self.screen.blit(self.background, (0, 0))
+            second_time = pygame.time.get_ticks()
+            if second_time - time > 1000:
+                time = second_time
+                for i in self.turret_blocks:
+                    bullet = Bullet((i.rect.right, i.rect.top - TILE))
+                    bullet.add(self.bullets)
+                    bullet.add(self.all_blocks)
+            for i in self.bullets:
+                i.update()
+
 
             self.all_blocks.draw(self.screen)
 
