@@ -31,12 +31,16 @@ class Turret:
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, coord):
+    def __init__(self, coord, vx, vy=0):
         pygame.sprite.Sprite.__init__(self)
         self.image = image_load(BULLET)
-        print(coord)
+        print(vx)
         self.rect = pygame.Rect(coord, PLAYER_SIZE)
-        self.vx, self.vy = choice([-BULLET_SPEED, BULLET_SPEED]), ri(0, BULLET_SPEED)
+        self.vx, self.vy = vx, vy
+        if self.vx > 0:
+            self.image = image_load(BULLET, (TILE // 2, TILE // 2))
+        else:
+            self.image = image_load(BULLET_LEFT, (TILE // 2, TILE // 2))
 
     def update(self):
         self.rect.x += self.vx
@@ -57,8 +61,8 @@ class Player(pygame.sprite.Sprite):
         self.image = self.right_image
 
         self.rect = pygame.Rect((0, WIN_SIZE.height - TILE), PLAYER_SIZE)
-        self.heart_image = image_load(HEART, (TILE // 2, TILE // 2))
         self.hp = PLAYER_HP
+        self.time = 0
 
         self.on_ground = False
 
@@ -115,6 +119,9 @@ class Player(pygame.sprite.Sprite):
         if self.vx > 0:
             self.image = self.right_image
         self.rect.x += self.vx
+        x = keys[pygame.K_x]
+        if x:
+            self.shoot()
 
         collided_blocks = pygame.sprite.spritecollide(self, hard_blocks, False)
         for block in collided_blocks:
@@ -153,6 +160,17 @@ class Player(pygame.sprite.Sprite):
 
     def get_money(self):
         return self.money
+
+    def shoot(self):
+        if not self.time:
+            self.time = pygame.time.get_ticks()
+        second_time = pygame.time.get_ticks()
+        if second_time - self.time > 200:
+            self.time = second_time
+            vx = 20
+            bullet = Bullet((self.rect.x - TILE // 2, self.rect.y), vx)
+            bullet.add(game.bullets)
+            bullet.add(game.all_blocks)
 
 
 class Window:
@@ -208,7 +226,6 @@ class Window:
         self.running = True
         time = pygame.time.get_ticks()
         while self.running:
-            # события
             events = pygame.event.get()
             for event in events:
                 if event.type == pygame.QUIT:
@@ -217,7 +234,6 @@ class Window:
                     if event.key == pygame.K_ESCAPE:
                         self.running = False
 
-            # действия
             ms = self.clock.tick_busy_loop(FPS)
             self.time += ms / 1000
             pygame.display.set_caption(f'{self.time:.2f} сек. {self.player.hp} ' \
@@ -225,18 +241,15 @@ class Window:
 
             self.player.update(self.coins, self.hard_blocks, self.spike_blocks)
 
-            # отрисовка
             self.screen.blit(self.background, (0, 0))
             second_time = pygame.time.get_ticks()
             if second_time - time > 1000:
                 time = second_time
                 for i in self.turret_blocks:
-                    bullet = Bullet((i.rect.right, i.rect.top - TILE))
+                    bullet = Bullet((i.rect.x - TILE // 2, i.rect.y - TILE // 2), choice([-BULLET_SPEED, BULLET_SPEED]))
                     bullet.add(self.bullets)
                     bullet.add(self.all_blocks)
-            for i in self.bullets:
-                i.update()
-
+            self.bullets.update()
 
             self.all_blocks.draw(self.screen)
 

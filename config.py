@@ -1,6 +1,6 @@
 import pygame
 
-TILE = 64
+TILE = 96
 WIN_SIZE = pygame.Rect(0, 0, TILE * 16, TILE * 9)
 FPS = 60
 
@@ -22,7 +22,8 @@ PLAYER_JUMP = 'data/platformChar_jump.png'
 COIN = 'data/hudCoin.png'
 HEART = 'data/tile_0373.png'
 BACKGROUND = 'data/back.png'
-BULLET = 'data/bullet.jpg'
+BULLET = 'data/bullet.png'
+BULLET_LEFT = 'data/bullet_left.png'
 BULLET_SPEED = 10
 TURRET_BLOCKS = 'T'
 
