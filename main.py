@@ -30,6 +30,21 @@ class Turret:
         pass
 
 
+class Camera(pygame.Rect):
+    def __init__(self, x=0, y=0):
+        pygame.Rect.__init__(self, (x, y), WIN_SIZE.size)
+
+    def update(self, player_x, player_y):
+        if not player_x < WIN_SIZE.size[0] // 2 and not player_x > MAP_X - WIN_SIZE.size[0] // 2:
+            self.centerx = player_x
+        if not player_y < WIN_SIZE.size[1] // 2 and not player_y > MAP_Y - WIN_SIZE.size[1] // 2:
+            self.centery = player_y
+
+    def draw(self, screen, objects):
+        for obj in objects:
+            screen.blit(obj.image, (obj.rect.x - self.x, obj.rect.y - self.y))
+
+
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, coord, vx, vy=0):
         pygame.sprite.Sprite.__init__(self)
@@ -54,14 +69,16 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
 
+        self.time_spike = 0
         self.vx, self.vy = 0, 0
         self.right_image = image_load(PLAYER_IDLE)
         self.left_image = image_load(PLAYER_LEFT)
         self.jump_image = image_load(PLAYER_JUMP)
         self.image = self.right_image
 
-        self.rect = pygame.Rect((0, WIN_SIZE.height - TILE), PLAYER_SIZE)
+        self.rect = pygame.Rect((0, 0), PLAYER_SIZE)
         self.hp = PLAYER_HP
+        self.clock = pygame.time.Clock()
         self.time = 0
 
         self.on_ground = False
@@ -85,20 +102,13 @@ class Player(pygame.sprite.Sprite):
         if len(collided_blocks) == 0:
             self.on_ground = False
         for block in collided_blocks:
-            if block in spike_blocks:
-                self.hp -= 25
-                if self.rect.x < block.rect.x:
-                    self.rect.right = block.rect.left - TILE // 2
-                else:
-                    self.rect.left = block.rect.right + TILE // 2
-            else:
-                if self.vy > 0:
-                    self.rect.bottom = block.rect.top
-                    self.vy = 0
-                    self.on_ground = True
-                if self.vy < 0:
-                    self.rect.top = block.rect.bottom
-                    self.vy = 0
+            if self.vy > 0:
+                self.rect.bottom = block.rect.top
+                self.vy = 0
+                self.on_ground = True
+            if self.vy < 0:
+                self.rect.top = block.rect.bottom
+                self.vy = 0
 
         # x
         left = keys[pygame.K_LEFT] or keys[pygame.K_a]
@@ -112,7 +122,7 @@ class Player(pygame.sprite.Sprite):
             self.vx = 0
 
         shift = keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
-        if shift and self.on_ground:
+        if shift:
             self.vx *= 2
         if self.vx < 0:
             self.image = self.left_image
@@ -125,38 +135,30 @@ class Player(pygame.sprite.Sprite):
 
         collided_blocks = pygame.sprite.spritecollide(self, hard_blocks, False)
         for block in collided_blocks:
-            if block in spike_blocks:
-                self.hp -= 25
-                if self.vx > 0:
-                    self.rect.right = block.rect.left - TILE // 2
-                    self.vx = 0
-                if self.vx < 0:
-                    self.rect.left = block.rect.right + TILE // 2
-                    self.vx = 0
             if self.vx > 0:
                 self.rect.right = block.rect.left
                 self.vx = 0
             if self.vx < 0:
                 self.rect.left = block.rect.right
                 self.vx = 0
-
-        if self.rect.y < 0:
-            self.rect.y = WIN_SIZE.y
-            self.vy = 0
-        if self.rect.x < WIN_SIZE.left:
-            self.rect.x = WIN_SIZE.left
-
+        if self.rect.y <= 0:
+            self.rect.y = 0
+        print(self.rect.x)
+        if self.rect.right >= MAP_X:
+            self.rect.right = MAP_X
+        if self.rect.left <= 0:
+            self.rect.left = 0
+        collided_spikes = pygame.sprite.spritecollide(self, spike_blocks, False)
+        for block in collided_spikes:
+            ms = self.clock.tick_busy_loop(FPS)
+            self.time += ms / 1000
+            if self.time_spike + 1 <= self.time:
+                self.time_spike = self.time
+                self.hp -= SPIKE_DAMAGE
         for coin in game.coins:
             if self.rect.colliderect(coin.rect):
                 self.money += 1
                 coin.kill()
-        if self.rect.right >= WIN_SIZE.right:
-            if len(game.coins) == 0:
-                game.map = (MAP_LIST[(MAP_LIST.index(game.map) + 1) % 3])
-                game.load_map()
-                self.rect.x = 0
-            else:
-                self.rect.right = WIN_SIZE.right
 
     def get_money(self):
         return self.money
@@ -168,7 +170,7 @@ class Player(pygame.sprite.Sprite):
         if second_time - self.time > 200:
             self.time = second_time
             vx = 20
-            bullet = Bullet((self.rect.x - TILE // 2, self.rect.y), vx)
+            bullet = Bullet((self.rect.centerx, self.rect.centery), vx)
             bullet.add(game.bullets)
             bullet.add(game.all_blocks)
 
@@ -188,6 +190,8 @@ class Window:
         self.turret_blocks = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
         self.player = Player()
+        self.camera = Camera()
+        self.camera.update(self.player.rect.centerx, self.player.rect.centery)
 
         self.running = True
 
@@ -218,8 +222,11 @@ class Window:
                         if letter in TURRET_BLOCKS:
                             block.add(self.turret_blocks)
                             Turret(BLOCKS[letter], coord)
+
                         elif letter in COIN_BLOCKS:
                             block.add(self.coins)
+                    if letter == 'P':
+                        self.player.rect = pygame.Rect(coord, PLAYER_SIZE)
 
     def run(self):
         self.load_map()
@@ -238,7 +245,6 @@ class Window:
             self.time += ms / 1000
             pygame.display.set_caption(f'{self.time:.2f} сек. {self.player.hp} ' \
                                        f'Деньжата {self.player.get_money()}')
-
             self.player.update(self.coins, self.hard_blocks, self.spike_blocks)
 
             self.screen.blit(self.background, (0, 0))
@@ -246,12 +252,14 @@ class Window:
             if second_time - time > 1000:
                 time = second_time
                 for i in self.turret_blocks:
-                    bullet = Bullet((i.rect.x - TILE // 2, i.rect.y - TILE // 2), choice([-BULLET_SPEED, BULLET_SPEED]))
+                    bullet = Bullet((i.rect.centerx, i.rect.centery), choice([-BULLET_SPEED, BULLET_SPEED]))
                     bullet.add(self.bullets)
                     bullet.add(self.all_blocks)
             self.bullets.update()
 
-            self.all_blocks.draw(self.screen)
+            # self.all_blocks.draw(self.screen)
+            self.camera.update(self.player.rect.centerx, self.player.rect.centery)
+            self.camera.draw(self.screen, self.all_blocks)
 
             pygame.display.flip()
 

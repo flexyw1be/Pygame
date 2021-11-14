@@ -26,6 +26,7 @@ BULLET = 'data/bullet.png'
 BULLET_LEFT = 'data/bullet_left.png'
 BULLET_SPEED = 10
 TURRET_BLOCKS = 'T'
+SPIKE_DAMAGE = 25
 
 BLOCKS = {
     'G': 'data/grassMid.png',
@@ -37,9 +38,11 @@ BLOCKS = {
     'T': 'data/turret.png'
 }
 
-HARD_BLOCKS = 'GDS'
+HARD_BLOCKS = 'GD'
 SPIKE_BLOCKS = 'S'
 COIN_BLOCKS = 'C'
 
 MAP_0, MAP_1, MAP_2 = 'map_0.txt', 'map_1.txt', 'map_2.txt'
 MAP_LIST = [MAP_0, MAP_1, MAP_2]
+with open(MAP_0) as f:
+    MAP_X, MAP_Y = (len(f.readline()) - 1) * TILE, (len(f.readlines()) + 1) * TILE

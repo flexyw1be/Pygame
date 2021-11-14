@@ -1,3 +1,12 @@
+                                                     
+   C                                                 
+  DD                                                 
+     C                                               
+   DDDD                                              
+           SC                                        
+        P DDDD                                       
+                            S         S          S   
+GGGGGGGGGG    GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 
    C
   DD
@@ -5,5 +14,5 @@
    DDDD
            SC
          DDDD
-
-GGGGGGGGGGGGGGGG
+                            S         S          S
+GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
